@@ -31,7 +31,7 @@ func mergeEverything(videoFile, audioFile, subsFile, outputFile string, subtitle
 		outputFile,
 	)
 
-	cmd := exec.Command("ffmpeg", args...)
+	cmd := exec.Command("./ffmpeg.exe", args...)
 	if err := cmd.Run(); err != nil {
 		panic(err)
 	}

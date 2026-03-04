@@ -201,12 +201,11 @@ func downloadEpisode(contentId string, videoQuality, audioQuality, subtitlesLang
 		_ = os.MkdirAll(cleanSeriesTitle, 0777)
 	}
 
-	outputFile := fmt.Sprintf("%s/%s S%02vE%02v [%s].mkv",
+	outputFile := fmt.Sprintf("%s/S%02vE%02v.mp4",
 		cleanSeriesTitle,
 		cleanSeriesTitle,
 		info.EpisodeMetadata.SeasonNumber, 
 		info.EpisodeMetadata.EpisodeNumber,
-		*videoQuality,
 	)
 
 	if _, err := os.Stat(outputFile); err == nil {
