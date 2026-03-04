@@ -237,6 +237,21 @@ func downloadEpisode(contentId string, videoQuality, audioQuality, subtitlesLang
 		fmt.Printf("Downloading subtitles for %s language...\n", languageNames[*subtitlesLang])
 		subsFile = downloadSubs(subtitles.URL)
 		fmt.Println("Downloaded subtitles!")
+
+		// 获取输出视频的路径（去除后缀 .mp4）
+        outputBase := strings.TrimSuffix(outputFile, ".mp4")
+        finalSubsPath := outputBase + ".ass"
+        
+        // 执行拷贝动作
+        inputSubs, err := os.ReadFile(subsFile)
+        if err == nil {
+            err = os.WriteFile(finalSubsPath, inputSubs, 0666)
+            if err != nil {
+                fmt.Printf("警告：无法保存外挂字幕文件: %v\n", err)
+            } else {
+                fmt.Printf("已保存外挂字幕: %s\n", finalSubsPath)
+            }
+        }
 	}
 
 	baseUrl, representationId := getBaseUrl(videoSet, true, *videoQuality)
@@ -263,7 +278,7 @@ func downloadEpisode(contentId string, videoQuality, audioQuality, subtitlesLang
 		print("Failed to remove the player stream, you will probably have issues downloading other episodes.\n")
 	}
 
-	mergeEverything(videoFile, audioFile, subsFile, outputFile, subtitlesLang, info)
+	mergeEverythingBemly(videoFile, audioFile, subsFile, outputFile, subtitlesLang, info)
 }
 
 func downloadSeason(videoQuality, audioQuality, subtitlesLang *string, episodes []SeasonEpisode) {
