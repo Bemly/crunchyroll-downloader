@@ -15,7 +15,7 @@ func parseManifest(url string) *mpd.MPD {
 		panic(err)
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		panic(err)

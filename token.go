@@ -30,7 +30,7 @@ func GetAccessToken(etpRt string) string {
 	}
 	req.Header.Set("Authorization", "Basic bm9haWhkZXZtXzZpeWcwYThsMHE6")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0")
 	req.AddCookie(&http.Cookie{Name: "device_id", Value: deviceId})
 	req.AddCookie(&http.Cookie{Name: "etp_rt", Value: etpRt})
 
