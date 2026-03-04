@@ -203,7 +203,6 @@ func downloadEpisode(contentId string, videoQuality, audioQuality, subtitlesLang
 
 	outputFile := fmt.Sprintf("%s/S%02vE%02v.mp4",
 		cleanSeriesTitle,
-		cleanSeriesTitle,
 		info.EpisodeMetadata.SeasonNumber, 
 		info.EpisodeMetadata.EpisodeNumber,
 	)
