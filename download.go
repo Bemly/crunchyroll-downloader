@@ -185,7 +185,7 @@ func downloadSubs(url string) string {
 	return filename
 }
 
-func downloadEpisode(contentId string, videoQuality, audioQuality, subtitlesLang *string, info EpisodeInfo) {
+func downloadEpisode(contentId string, videoQuality, audioQuality, subtitlesLang *string, info EpisodeInfo) error {
 	sanitize := func(s string) string {
 		illegal := []string{"\\", "/", ":", "*", "?", "\"", "<", ">", "|"}
 		res := s
@@ -203,13 +203,13 @@ func downloadEpisode(contentId string, videoQuality, audioQuality, subtitlesLang
 
 	outputFile := fmt.Sprintf("%s/S%02vE%02v.mp4",
 		cleanSeriesTitle,
-		info.EpisodeMetadata.SeasonNumber, 
+		info.EpisodeMetadata.SeasonNumber,
 		info.EpisodeMetadata.EpisodeNumber,
 	)
 
 	if _, err := os.Stat(outputFile); err == nil {
 		fmt.Printf("Episode %v is already downloaded, skipping...\n", info.EpisodeMetadata.EpisodeNumber)
-		return
+		return fmt.Errorf("Episode %v is already downloaded, skipping...\n", info.EpisodeMetadata.EpisodeNumber)
 	}
 
 	episode := getEpisode(contentId)
@@ -218,7 +218,7 @@ func downloadEpisode(contentId string, videoQuality, audioQuality, subtitlesLang
 	manifest := parseManifest(episode.ManifestURL)
 	pssh := getPssh(manifest)
 	if pssh == nil {
-		panic("PSSH not found")
+		return fmt.Errorf("PSSH not found for episode %v", info.EpisodeMetadata.EpisodeNumber)
 	}
 	videoSet := manifest.Period[0].AdaptationSets[0]
 	audioSet := manifest.Period[0].AdaptationSets[1]
@@ -226,7 +226,8 @@ func downloadEpisode(contentId string, videoQuality, audioQuality, subtitlesLang
 	err := getLicense(*pssh, contentId, episode.Token)
 	if err != nil {
 		fmt.Printf("Error: %s", err)
-		os.Exit(1)
+		// 这里就是你重试次数过多后的返回点
+		return fmt.Errorf("video download failed: %w", err)
 	}
 
 	subtitles := episode.Subtitles[*subtitlesLang]
@@ -237,50 +238,52 @@ func downloadEpisode(contentId string, videoQuality, audioQuality, subtitlesLang
 		fmt.Println("Downloaded subtitles!")
 
 		// 获取输出视频的路径（去除后缀 .mp4）
-        outputBase := strings.TrimSuffix(outputFile, ".mp4")
-        finalSubsPath := outputBase + ".ass"
-        
-        // 执行拷贝动作
-        inputSubs, err := os.ReadFile(subsFile)
-        if err == nil {
-            err = os.WriteFile(finalSubsPath, inputSubs, 0666)
-            if err != nil {
-                fmt.Printf("警告：无法保存外挂字幕文件: %v\n", err)
-            } else {
-                fmt.Printf("已保存外挂字幕: %s\n", finalSubsPath)
-            }
-        }
+		outputBase := strings.TrimSuffix(outputFile, ".mp4")
+		finalSubsPath := outputBase + ".ass"
+
+		// 执行拷贝动作
+		inputSubs, err := os.ReadFile(subsFile)
+		if err == nil {
+			err = os.WriteFile(finalSubsPath, inputSubs, 0666)
+			if err != nil {
+				fmt.Printf("警告：无法保存外挂字幕文件: %v\n", err)
+			} else {
+				fmt.Printf("已保存外挂字幕: %s\n", finalSubsPath)
+			}
+		}
 	}
 
 	baseUrl, representationId := getBaseUrl(videoSet, true, *videoQuality)
 	if baseUrl == nil {
 		print("Failed to get the video base URL, maybe the video quality you entered is wrong?\n")
-		os.Exit(1)
+		return fmt.Errorf("Failed to get the video base URL, maybe the video quality you entered is wrong?\n")
 	}
 	videoFile, err := downloadParts(baseUrl, representationId, videoSet)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	audioBaseUrl, audioRepresentationId := getBaseUrl(audioSet, false, *audioQuality)
 	if audioBaseUrl == nil {
 		print("Failed to get the audio base URL, maybe the audio quality you entered is wrong?\n")
-		os.Exit(1)
+		return fmt.Errorf("failed to get audio base URL")
 	}
 	audioFile, err := downloadParts(audioBaseUrl, audioRepresentationId, audioSet)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("audio download failed: %w", err)
 	}
 
 	if success := deleteStream(contentId, episode.Token); !success {
 		print("Failed to remove the player stream, you will probably have issues downloading other episodes.\n")
 	}
 
-	mergeEverythingBemly(videoFile, audioFile, subsFile, outputFile, subtitlesLang, info)
+	return mergeEverythingBemly(videoFile, audioFile, subsFile, outputFile, subtitlesLang, info)
 }
 
 func downloadSeason(videoQuality, audioQuality, subtitlesLang *string, episodes []SeasonEpisode) {
 	fmt.Printf("Downloading season %v of %s (%v episodes)\n\n", episodes[0].SeasonNumber, episodes[0].SeriesTitle, len(episodes))
+
+	failedEpisodes := []int{} // 记录失败的集数
 
 	for _, episode := range episodes {
 		info := EpisodeInfo{
@@ -294,6 +297,23 @@ func downloadSeason(videoQuality, audioQuality, subtitlesLang *string, episodes 
 			},
 			Title: episode.Title,
 		}
-		downloadEpisode(episode.ID, videoQuality, audioQuality, subtitlesLang, info)
+
+		// 调用修改后的函数
+		err := downloadEpisode(episode.ID, videoQuality, audioQuality, subtitlesLang, info)
+
+		if err != nil {
+			// 打印错误但不要 panic，继续循环
+			fmt.Printf("\n[ERROR] Skipping Episode %v due to error: %v\n", episode.EpisodeNumber, err)
+			failedEpisodes = append(failedEpisodes, episode.EpisodeNumber)
+			continue
+		}
+		fmt.Printf("\n[SUCCESS] Finished Episode %v\n", episode.EpisodeNumber)
+	}
+
+	// 最后汇总一下哪些没下成功
+	if len(failedEpisodes) > 0 {
+		fmt.Printf("\n--- Download Summary ---\nSuccessfully downloaded the season, but the following episodes failed: %v\n", failedEpisodes)
+	} else {
+		fmt.Printf("\n--- All episodes downloaded successfully! ---\n")
 	}
 }
