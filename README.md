@@ -37,11 +37,11 @@ Check the [latest release](https://github.com/CuteTenshii/crunchyroll-downloader
 ```shell
 Usage of ./crunchyroll-downloader:
   -audio-lang string
-        Audio language(s), comma-separated for multiple (e.g. "ja-JP,en-US"). First is the default track (default "ja-JP")
+        Audio language(s), comma-separated (e.g. "ja-JP,en-US"). Add ALL for every available dub; explicit languages lead, the first available track is default, and ALL alone prefers ja-JP (default "ja-JP")
   -audio-quality string
         Audio quality (default "192k")
   -cc-lang string
-        Closed caption language(s), comma-separated for multiple (e.g. "en-US"). Downloaded in addition to --subs-lang, not instead of it
+        Closed caption language(s), comma-separated (e.g. "en-US,ALL"). Add ALL for every available caption; downloaded in addition to --subs-lang
   -debug-manifest
         Log raw episode playback JSON and manifest XML
   -download-delay duration
@@ -53,7 +53,7 @@ Usage of ./crunchyroll-downloader:
   -season int
         Season number. Not used if an episode link is entered
   -subs-lang string
-        Subtitle language(s), comma-separated for multiple (e.g. "en-US,es-419"). First is the default track (default "en-US")
+        Subtitle language(s), comma-separated (e.g. "fr-FR,ALL"). Add ALL for every available subtitle; explicit languages lead, the first available track is default, and ALL alone prefers en-US (default "en-US")
   -url string
         URL of the episode/season to download
   -video-quality string
@@ -75,9 +75,17 @@ To batch download from a file (one URL per line):
 ./crunchyroll-downloader --file list.txt --etp-rt replace_this --subs-lang pt-BR
 ```
 
-To download multiple audio tracks and subtitles into a single file (the first of each is set as the default track). If any requested language is missing for an episode, that episode is skipped:
+To download multiple audio tracks and subtitles into a single file (the first available requested track of each kind is set as the default):
 ```shell
 ./crunchyroll-downloader --url https://www.crunchyroll.com/watch/GE00198973JAJP/dawn-and-confusion --etp-rt replace_this --audio-lang ja-JP,en-US --subs-lang en-US,es-419,de-DE
+```
+
+Use `ALL` in any of the three language lists to add every language available for each episode. Explicit languages keep their listed order ahead of the remaining languages, which are added alphabetically without duplicates. For example, `--subs-lang fr-FR,ALL` makes French the default subtitle when available and adds the other subtitles as secondary tracks. `--audio-lang en-US,ALL` does the same for audio. With `ALL` alone, `ja-JP` is the default audio and `en-US` the default subtitle when available; otherwise, the first language alphabetically becomes the default. Closed captions are separate from normal subtitles and are never default tracks. `--cc-lang ALL` adds every available caption alongside the subtitles selected by `--subs-lang`, including captions found on other dub versions.
+
+Missing explicitly requested audio languages are skipped, and the episode is skipped only when no requested audio is available. Missing explicitly requested subtitles or captions are skipped. `ALL` only adds tracks available for that episode.
+
+```shell
+./crunchyroll-downloader --url https://www.crunchyroll.com/watch/GE00198973JAJP/dawn-and-confusion --etp-rt replace_this --audio-lang ja-JP,ALL --subs-lang fr-FR,ALL --cc-lang ALL
 ```
 
 If you're getting rate-limited while downloading a season/batch, wait at least this long between each episode:

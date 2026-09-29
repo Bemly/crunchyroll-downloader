@@ -2,6 +2,24 @@ package main
 
 import "testing"
 
+func TestPreferredRequestLocale(t *testing.T) {
+	tests := []struct {
+		langs    []string
+		fallback string
+		want     string
+	}{
+		{[]string{"fr-FR", "ALL"}, "en-US", "fr-FR"},
+		{[]string{"ALL", "fr-FR"}, "en-US", "fr-FR"},
+		{[]string{"all"}, "ja-JP", "ja-JP"},
+		{nil, "en-US", "en-US"},
+	}
+	for _, tc := range tests {
+		if got := preferredRequestLocale(tc.langs, tc.fallback); got != tc.want {
+			t.Errorf("preferredRequestLocale(%v, %q) = %q, want %q", tc.langs, tc.fallback, got, tc.want)
+		}
+	}
+}
+
 func TestParseUrl(t *testing.T) {
 	tests := []struct {
 		name            string
