@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.0
+
+- Added `--download-delay` to wait a minimum time between episode downloads, which helps avoid Crunchyroll's rate limiting on season and batch downloads ([#42](https://github.com/CuteTenshii/crunchyroll-downloader/issues/42), [#57](https://github.com/CuteTenshii/crunchyroll-downloader/issues/57))
+- A rate-limited episode is now retried in place, waiting `--download-delay` (or 1 minute if unset) and doubling up to 30 minutes on repeated hits, instead of moving on and hitting the same limit on the next episode
+- `ALL` can now be combined with specific languages in `--audio-lang`, `--subs-lang` and `--cc-lang` (e.g. `--subs-lang fr-FR,ALL`). The listed languages come first and the first one is the default track. `ALL` on its own prefers `ja-JP` audio and `en-US` subtitles
+- Subtitles and closed captions are now collected from every downloaded audio version, so captions that only exist on a dub (like the English dub's English captions) are no longer reported as unavailable
+- FFmpeg is now found when it's in the same folder as the downloader, which previously failed on Windows with "cannot run executable found relative to current directory". A missing FFmpeg is reported at startup instead of after every track has downloaded ([#61](https://github.com/CuteTenshii/crunchyroll-downloader/issues/61))
+- An invalid or expired `--etp-rt` cookie now exits with a clear message instead of printing "Access token expired. Refetching one..." forever
+- Fixed a crash when removing a player stream failed during cleanup
+
 ## 1.5.1
 
 - Audio dubs, subtitles, closed captions and the video track now download concurrently instead of one after another, making multi-language downloads much faster
