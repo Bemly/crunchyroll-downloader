@@ -128,6 +128,16 @@ func main() {
 		fmt.Println("You must specify the \"-etp-rt\" option!\n- Open Crunchyroll on your browser and log in.\n- Open developer tools (Ctrl+Shift+I), go to \"Application\", and then \"Cookies\".\n- The value of the \"ept_rt\" cookie is what you need to input into this option.")
 		os.Exit(1)
 	}
+
+	// Checked up front so a missing ffmpeg fails before anything is downloaded,
+	// not at merge time after every track has been fetched.
+	ffmpeg, err := findFFmpeg()
+	if err != nil {
+		fmt.Println("FFmpeg wasn't found. Install it and add it to your PATH, or put the ffmpeg executable in the same folder as this program.\nDownload it from https://www.ffmpeg.org/download.html")
+		os.Exit(1)
+	}
+	ffmpegPath = ffmpeg
+
 	token = GetAccessToken(*etpRt)
 	backoff = newDownloadBackoff(*downloadDelay)
 

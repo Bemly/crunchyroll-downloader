@@ -105,7 +105,7 @@ func mergeEverything(videoFile string, audioTracks, subTracks []mediaTrack, outp
 		outputFile,
 	)
 
-	cmd := exec.Command("ffmpeg", args...)
+	cmd := exec.Command(ffmpegPath, args...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
