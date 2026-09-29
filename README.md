@@ -80,10 +80,7 @@ To download multiple audio tracks and subtitles into a single file (the first av
 ./crunchyroll-downloader --url https://www.crunchyroll.com/watch/GE00198973JAJP/dawn-and-confusion --etp-rt replace_this --audio-lang ja-JP,en-US --subs-lang en-US,es-419,de-DE
 ```
 
-Use `ALL` in any of the three language lists to add every language available for each episode. Explicit languages keep their listed order ahead of the remaining languages, which are added alphabetically without duplicates. For example, `--subs-lang fr-FR,ALL` makes French the default subtitle when available and adds the other subtitles as secondary tracks. `--audio-lang en-US,ALL` does the same for audio. With `ALL` alone, `ja-JP` is the default audio and `en-US` the default subtitle when available; otherwise, the first language alphabetically becomes the default. Closed captions are separate from normal subtitles and are never default tracks. `--cc-lang ALL` adds every available caption alongside the subtitles selected by `--subs-lang`, including captions found on other dub versions.
-
-Missing explicitly requested audio languages are skipped, and the episode is skipped only when no requested audio is available. Missing explicitly requested subtitles or captions are skipped. `ALL` only adds tracks available for that episode.
-
+Add `ALL` to any language list to include every available language; listed languages come first. For example, `--subs-lang fr-FR,ALL` makes French the default subtitle and adds the rest:
 ```shell
 ./crunchyroll-downloader --url https://www.crunchyroll.com/watch/GE00198973JAJP/dawn-and-confusion --etp-rt replace_this --audio-lang ja-JP,ALL --subs-lang fr-FR,ALL --cc-lang ALL
 ```
