@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -315,14 +316,17 @@ func TestMergeSubtitleAndCaptions(t *testing.T) {
 		{
 			Subtitles: map[string]*Subtitle{
 				"en-US": {Language: "en-US", Format: "ass", URL: "sub-en"},
+				"fr-FR": {Language: "fr-FR", Format: "ass"},
 			},
 			Captions: map[string]*Subtitle{
 				"zh-CN": {Language: "zh-CN", Format: "vtt", URL: "cc-zh"},
+				"en-US": {Language: "en-US", Format: "vtt"},
 			},
 		},
 		{
 			Subtitles: map[string]*Subtitle{
 				"en-US": {Language: "en-US", Format: "ass", URL: "sub-en"},
+				"fr-FR": {Language: "fr-FR", Format: "ass", URL: "sub-fr"},
 			},
 			Captions: map[string]*Subtitle{
 				"en-US": {Language: "en-US", Format: "vtt", URL: "cc-en"},
@@ -341,6 +345,9 @@ func TestMergeSubtitleAndCaptions(t *testing.T) {
 	if captions["zh-CN"] == nil {
 		t.Fatalf("zh-CN caption missing from merged map")
 	}
+	if subtitles["fr-FR"].URL != "sub-fr" || captions["en-US"].URL != "cc-en" {
+		t.Fatalf("mergeSubtitleAndCaptions() kept an empty URL: subtitles=%v, captions=%v", subtitles, captions)
+	}
 }
 
 func TestFilterAvailableLangs(t *testing.T) {
@@ -355,5 +362,61 @@ func TestFilterAvailableLangs(t *testing.T) {
 
 	if got := filterAvailableLangs(nil, available, "Subtitle", 0); got != nil {
 		t.Fatalf("filterAvailableLangs(nil) = %v, want nil", got)
+	}
+}
+
+func TestExpandLangs(t *testing.T) {
+	tests := []struct {
+		name      string
+		requested []string
+		available []string
+		preferred string
+		want      []string
+	}{
+		{"explicit before ALL", []string{"fr-FR", "ALL"}, []string{"es-419", "en-US", "fr-FR"}, "en-US", []string{"fr-FR", "en-US", "es-419"}},
+		{"explicit after ALL", []string{"ALL", "fr-FR"}, []string{"en-US", "fr-FR"}, "en-US", []string{"fr-FR", "en-US"}},
+		{"multiple explicit and duplicate ALL", []string{"fr-FR", "ALL", "en-US", "all", "fr-FR"}, []string{"es-419", "en-US", "fr-FR"}, "en-US", []string{"fr-FR", "en-US", "es-419"}},
+		{"audio ALL prefers Japanese", []string{"ALL"}, []string{"it-IT", "ja-JP", "en-US"}, "ja-JP", []string{"ja-JP", "en-US", "it-IT"}},
+		{"subtitle ALL prefers English", []string{"all"}, []string{"fr-FR", "en-US", "de-DE"}, "en-US", []string{"en-US", "de-DE", "fr-FR"}},
+		{"preferred unavailable", []string{"ALL"}, []string{"fr-FR", "de-DE"}, "en-US", []string{"de-DE", "fr-FR"}},
+		{"explicit missing is kept for existing warning", []string{"hi-IN", "ALL"}, []string{"fr-FR"}, "en-US", []string{"hi-IN", "fr-FR"}},
+		{"ALL with no available", []string{"ALL"}, nil, "en-US", nil},
+		{"explicit list unchanged", []string{"hi-IN", "en-US", "en-US"}, []string{"en-US"}, "en-US", []string{"hi-IN", "en-US", "en-US"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := expandLangs(tc.requested, tc.available, tc.preferred)
+			if !slices.Equal(got, tc.want) {
+				t.Fatalf("expandLangs() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestAvailableSubtitleLangs(t *testing.T) {
+	tracks := map[string]*Subtitle{
+		"en-US":  {URL: "subtitle-en"},
+		"fr-FR":  {URL: "subtitle-fr"},
+		"de-DE":  {},
+		"es-419": nil,
+		"":       {URL: "no-locale"},
+	}
+	got := expandLangs([]string{"ALL"}, availableSubtitleLangs(tracks), "en-US")
+	if want := []string{"en-US", "fr-FR"}; !slices.Equal(got, want) {
+		t.Fatalf("available subtitle expansion = %v, want %v", got, want)
+	}
+}
+
+func TestAdditionalVersionGUIDs(t *testing.T) {
+	available := map[string]string{
+		"ja-JP": "ja-guid",
+		"en-US": "en-guid",
+		"fr-FR": "fr-guid",
+		"fr-CA": "fr-guid",
+		"de-DE": "",
+	}
+	got := additionalVersionGUIDs(available, []string{"ja-guid"})
+	if want := []string{"en-guid", "fr-guid"}; !slices.Equal(got, want) {
+		t.Fatalf("additionalVersionGUIDs() = %v, want %v", got, want)
 	}
 }

@@ -10,9 +10,9 @@ import (
 
 var (
 	token         = ""
-	audioLang     = flag.String("audio-lang", "ja-JP", "Audio language(s), comma-separated for multiple (e.g. \"ja-JP,en-US\"). First is the default track")
-	subtitlesLang = flag.String("subs-lang", "en-US", "Subtitle language(s), comma-separated for multiple (e.g. \"en-US,es-419\"). First is the default track")
-	ccLang        = flag.String("cc-lang", "", "Closed caption language(s), comma-separated for multiple (e.g. \"en-US\"). Downloaded in addition to --subs-lang, not instead of it")
+	audioLang     = flag.String("audio-lang", "ja-JP", "Audio language(s), comma-separated (e.g. \"ja-JP,en-US\"). Add ALL for every available dub; explicit languages lead, the first available track is default, and ALL alone prefers ja-JP")
+	subtitlesLang = flag.String("subs-lang", "en-US", "Subtitle language(s), comma-separated (e.g. \"fr-FR,ALL\"). Add ALL for every available subtitle; explicit languages lead, the first available track is default, and ALL alone prefers en-US")
+	ccLang        = flag.String("cc-lang", "", "Closed caption language(s), comma-separated (e.g. \"en-US,ALL\"). Add ALL for every available caption; downloaded in addition to --subs-lang")
 	videoQuality  = flag.String("video-quality", "1080p", "Video quality")
 	audioQuality  = flag.String("audio-quality", "192k", "Audio quality")
 	seasonNumber  = flag.Int("season", 0, "Season number. Not used if an episode link is entered")
@@ -36,6 +36,17 @@ func parseLangs(s string) []string {
 		}
 	}
 	return out
+}
+
+// preferredRequestLocale provides a real locale for the season API even when
+// ALL is requested; track selection still happens against each episode later.
+func preferredRequestLocale(langs []string, fallback string) string {
+	for _, locale := range langs {
+		if !strings.EqualFold(locale, "all") {
+			return locale
+		}
+	}
+	return fallback
 }
 
 // parseUrl extracts the content type ("watch" or "series") and content ID from a
@@ -66,13 +77,10 @@ func processUrl(url string) {
 	ccLangs := parseLangs(*ccLang)
 
 	// The season/series API endpoints take a single preferred locale; use the
-	// primary (first) requested one. All dub versions are still listed per
-	// episode, so the other languages remain resolvable.
-	primaryAudio := audioLangs[0]
-	primarySubs := "en-US"
-	if len(subsLangs) > 0 {
-		primarySubs = subsLangs[0]
-	}
+	// first explicit request or the usual default for ALL alone. Track
+	// availability is resolved from each episode's dub versions later.
+	primaryAudio := preferredRequestLocale(audioLangs, "ja-JP")
+	primarySubs := preferredRequestLocale(subsLangs, "en-US")
 
 	if contentType == "watch" {
 		info := getEpisodeInfo(contentId)
@@ -120,7 +128,6 @@ func main() {
 		fmt.Println("You must specify the \"-etp-rt\" option!\n- Open Crunchyroll on your browser and log in.\n- Open developer tools (Ctrl+Shift+I), go to \"Application\", and then \"Cookies\".\n- The value of the \"ept_rt\" cookie is what you need to input into this option.")
 		os.Exit(1)
 	}
-
 	token = GetAccessToken(*etpRt)
 	backoff = newDownloadBackoff(*downloadDelay)
 
