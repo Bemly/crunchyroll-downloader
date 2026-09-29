@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -138,7 +139,15 @@ func main() {
 	}
 	ffmpegPath = ffmpeg
 
-	token = GetAccessToken(*etpRt)
+	token, err = GetAccessToken(*etpRt)
+	if errors.Is(err, errAuthRejected) {
+		fmt.Printf("Couldn't log in: %s\nYour \"-etp-rt\" cookie is wrong or expired. Copy a fresh one from your browser (see the README).\n", err)
+		os.Exit(1)
+	}
+	if err != nil {
+		fmt.Printf("Couldn't log in: %s\n", err)
+		os.Exit(1)
+	}
 	backoff = newDownloadBackoff(*downloadDelay)
 
 	if *urlsFile != "" {
